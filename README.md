@@ -1,6 +1,6 @@
 # QuakeImagery
 
-[![Quality](https://github.com/ZuhairQuakes/QuakeImagery/actions/workflows/quality.yml/badge.svg)](https://github.com/ZuhairQuakes/QuakeImagery/actions/workflows/quality.yml)
+[![Quality](https://github.com/ZuhairQuakes/Visualization-Tool/actions/workflows/quality.yml/badge.svg)](https://github.com/ZuhairQuakes/Visualization-Tool/actions/workflows/quality.yml)
 
 An interactive Streamlit application for querying the USGS Earthquake Catalog, exploring clustered earthquake events, and optionally overlaying a user-supplied georeferenced GeoTIFF.
 
@@ -18,7 +18,7 @@ QuakeImagery does **not** download imagery from NASA or another imagery provider
 ## Quick start
 
 ```bash
-git clone https://github.com/ZuhairQuakes/QuakeImagery.git
+git clone https://github.com/ZuhairQuakes/Visualization-Tool.git
 cd QuakeImagery
 python -m venv .venv
 source .venv/bin/activate
