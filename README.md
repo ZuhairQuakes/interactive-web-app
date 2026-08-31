@@ -1,19 +1,18 @@
 # QuakeImagery
 
 [![Quality](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/quality.yml/badge.svg)](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/quality.yml)
-[![Map demo](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/pages.yml/badge.svg)](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/pages.yml)
 
 An interactive Streamlit application for querying the USGS Earthquake Catalog, exploring clustered earthquake events, and optionally overlaying a user-supplied georeferenced GeoTIFF.
 
 ## Live earthquake map
 
-[![Open the live QuakeImagery earthquake map](docs/map-preview.svg)](https://zuhairquakes.github.io/interactive-web-app/)
+[![Open the live QuakeImagery earthquake map](docs/map-preview.svg)](https://htmlpreview.github.io/?https://github.com/ZuhairQuakes/interactive-web-app/blob/main/docs/index.html)
 
-**[Open the interactive map →](https://zuhairquakes.github.io/interactive-web-app/)**
+**[Open the interactive map →](https://htmlpreview.github.io/?https://github.com/ZuhairQuakes/interactive-web-app/blob/main/docs/index.html)**
 
 Pan, zoom, inspect event details, and filter the current results by magnitude. The demo loads the official [USGS M4.5+ earthquake feed for the past 30 days](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson) at runtime, so no stale sample catalogue is stored in the repository.
 
-GitHub README files cannot execute interactive JavaScript directly. The preview above therefore opens the full Leaflet map deployed from this repository.
+GitHub README files cannot execute interactive JavaScript directly. The preview above therefore opens the standalone Leaflet map through GitHub HTML Preview.
 
 ## Features
 
@@ -58,7 +57,7 @@ Large rasters are resampled to approximately two million display pixels. One-ban
 | [`quakeimagery/usgs.py`](quakeimagery/usgs.py) | validated USGS query model and GeoJSON normalization |
 | [`quakeimagery/imagery.py`](quakeimagery/imagery.py) | safe in-memory GeoTIFF loading and display normalization |
 | [`quakeimagery/mapping.py`](quakeimagery/mapping.py) | Folium event markers and raster overlays |
-| [`docs/index.html`](docs/index.html) | standalone live-USGS Leaflet map deployed to GitHub Pages |
+| [`docs/index.html`](docs/index.html) | standalone live-USGS Leaflet map linked from the README |
 | [`tests/`](tests/) | unit tests for queries, parsing, imagery, and map construction |
 | [`requirements.txt`](requirements.txt) | runtime dependencies |
 

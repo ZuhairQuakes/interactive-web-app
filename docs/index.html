@@ -275,10 +275,10 @@
       Data: USGS
     </a>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       "use strict";
 
+      function initialiseMap() {
       const FEED_URL =
         "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson";
       const map = L.map("map", { minZoom: 2, worldCopyJump: true }).setView([12, 10], 2);
@@ -411,6 +411,25 @@
 
       refreshButton.addEventListener("click", loadEvents);
       loadEvents();
+      }
+
+      if (window.L) {
+        initialiseMap();
+      } else {
+        const leafletScript = document.createElement("script");
+        leafletScript.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        leafletScript.addEventListener("load", initialiseMap, { once: true });
+        leafletScript.addEventListener(
+          "error",
+          () => {
+            const status = document.querySelector("#status");
+            status.dataset.state = "error";
+            status.textContent = "Could not load the map library. Refresh to try again.";
+          },
+          { once: true },
+        );
+        document.head.append(leafletScript);
+      }
     </script>
   </body>
 </html>

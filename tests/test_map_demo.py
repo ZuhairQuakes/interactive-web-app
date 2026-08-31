@@ -14,7 +14,6 @@ class DemoParser(HTMLParser):
         super().__init__()
         self.ids: set[str] = set()
         self.magnitude_filters: set[str] = set()
-        self.scripts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = dict(attrs)
@@ -22,8 +21,6 @@ class DemoParser(HTMLParser):
             self.ids.add(element_id)
         if minimum := attributes.get("data-minimum"):
             self.magnitude_filters.add(minimum)
-        if tag == "script" and (source := attributes.get("src")):
-            self.scripts.append(source)
 
 
 def test_map_demo_has_required_controls_and_dependencies() -> None:
@@ -33,7 +30,7 @@ def test_map_demo_has_required_controls_and_dependencies() -> None:
 
     assert {"map", "map-title", "status", "refresh"} <= parser.ids
     assert parser.magnitude_filters == {"4.5", "5", "6"}
-    assert parser.scripts == ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"]
+    assert 'leafletScript.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"' in html
 
 
 def test_map_demo_uses_the_official_usgs_feed_safely() -> None:
