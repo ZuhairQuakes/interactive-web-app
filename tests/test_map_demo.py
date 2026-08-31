@@ -40,3 +40,12 @@ def test_map_demo_uses_the_official_usgs_feed_safely() -> None:
     assert 'rel="noopener noreferrer"' in html
     assert "textContent =" in html
     assert "innerHTML" not in html
+
+
+def test_map_demo_labels_events_with_magnitude_and_date() -> None:
+    html = DEMO_PATH.read_text(encoding="utf-8")
+
+    assert 'eventTime.toISOString().slice(0, 10)' in html
+    assert 'marker.bindTooltip(`M${magnitude.toFixed(1)} · ${dateLabel}`' in html
+    assert "const permanentlyLabelled = selectPermanentlyLabelled(visibleFeatures)" in html
+    assert "permanent: permanentlyLabelled.has(feature)" in html

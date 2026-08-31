@@ -10,7 +10,7 @@ An interactive Streamlit application for querying the USGS Earthquake Catalog, e
 
 **[Open the interactive map →](https://htmlpreview.github.io/?https://github.com/ZuhairQuakes/interactive-web-app/blob/main/docs/index.html)**
 
-Pan, zoom, inspect event details, and filter the current results by magnitude. The demo loads the official [USGS M4.5+ earthquake feed for the past 30 days](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson) at runtime, so no stale sample catalogue is stored in the repository.
+Pan, zoom, inspect event details, and filter the current results by magnitude. Prominent events are labelled with magnitude and UTC date, while every marker reveals the same annotation on hover. The demo loads the official [USGS M4.5+ earthquake feed for the past 30 days](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson) at runtime, so no stale sample catalogue is stored in the repository. The README preview combines current USGS events with an accurate [Natural Earth](https://www.naturalearthdata.com/) world basemap.
 
 GitHub README files cannot execute interactive JavaScript directly. The preview above therefore opens the standalone Leaflet map through GitHub HTML Preview.
 
@@ -58,6 +58,7 @@ Large rasters are resampled to approximately two million display pixels. One-ban
 | [`quakeimagery/imagery.py`](quakeimagery/imagery.py) | safe in-memory GeoTIFF loading and display normalization |
 | [`quakeimagery/mapping.py`](quakeimagery/mapping.py) | Folium event markers and raster overlays |
 | [`docs/index.html`](docs/index.html) | standalone live-USGS Leaflet map linked from the README |
+| [`scripts/generate_map_preview.py`](scripts/generate_map_preview.py) | rebuilds the accurate README preview from Natural Earth and USGS GeoJSON |
 | [`tests/`](tests/) | unit tests for queries, parsing, imagery, and map construction |
 | [`requirements.txt`](requirements.txt) | runtime dependencies |
 

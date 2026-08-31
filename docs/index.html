@@ -208,6 +208,22 @@
         font-weight: 700;
       }
 
+      .leaflet-tooltip.quake-label {
+        padding: 0.26rem 0.42rem;
+        border: 1px solid rgba(203, 213, 225, 0.62);
+        border-radius: 6px;
+        background: rgba(7, 17, 31, 0.92);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+        color: #f8fafc;
+        font-size: 0.68rem;
+        font-weight: 750;
+        letter-spacing: 0.01em;
+      }
+
+      .leaflet-tooltip-top.quake-label::before {
+        border-top-color: rgba(7, 17, 31, 0.92);
+      }
+
       @media (max-width: 720px) {
         .panel {
           top: 0.55rem;
@@ -306,6 +322,33 @@
         return Math.max(5, Math.min(17, 5 + (magnitude - 4.5) * 4));
       }
 
+      function selectPermanentlyLabelled(featureCollection, maximum = 8) {
+        const selected = [];
+        const sorted = [...featureCollection].sort(
+          (left, right) => Number(right.properties?.mag) - Number(left.properties?.mag),
+        );
+        for (const feature of sorted) {
+          const coordinates = feature.geometry?.coordinates;
+          if (!Array.isArray(coordinates) || coordinates.length < 2) continue;
+          const [longitude, latitude] = coordinates;
+          if (latitude > 55) continue;
+          const isSeparated = selected.every((candidate) => {
+            const [otherLongitude, otherLatitude] = candidate.geometry.coordinates;
+            const longitudeDelta = Math.min(
+              Math.abs(longitude - otherLongitude),
+              360 - Math.abs(longitude - otherLongitude),
+            );
+            const averageLatitude = ((latitude + otherLatitude) / 2) * (Math.PI / 180);
+            const projectedLongitudeDelta = longitudeDelta * Math.cos(averageLatitude);
+            return Math.hypot(projectedLongitudeDelta, latitude - otherLatitude) >= 32;
+          });
+          if (!isSeparated) continue;
+          selected.push(feature);
+          if (selected.length === maximum) break;
+        }
+        return new Set(selected);
+      }
+
       function createPopup(feature) {
         const properties = feature.properties ?? {};
         const coordinates = feature.geometry?.coordinates ?? [];
@@ -343,6 +386,7 @@
         const visibleFeatures = features.filter(
           (feature) => Number(feature.properties?.mag) >= selectedMinimum,
         );
+        const permanentlyLabelled = selectPermanentlyLabelled(visibleFeatures);
 
         for (const feature of visibleFeatures) {
           const coordinates = feature.geometry?.coordinates;
@@ -353,15 +397,26 @@
           const [longitude, latitude] = coordinates;
           if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) continue;
 
-          L.circleMarker([latitude, longitude], {
+          const eventTime = new Date(feature.properties?.time);
+          const dateLabel = Number.isNaN(eventTime.valueOf())
+            ? "date unavailable"
+            : eventTime.toISOString().slice(0, 10);
+          const marker = L.circleMarker([latitude, longitude], {
             radius: markerRadius(magnitude),
             color: "rgba(255, 255, 255, 0.82)",
             weight: 1.5,
             fillColor: markerColour(magnitude),
             fillOpacity: 0.82,
-          })
-            .bindPopup(createPopup(feature))
-            .addTo(earthquakeLayer);
+          });
+          marker.bindPopup(createPopup(feature));
+          marker.bindTooltip(`M${magnitude.toFixed(1)} · ${dateLabel}`, {
+            className: "quake-label",
+            direction: "top",
+            offset: [0, -markerRadius(magnitude)],
+            opacity: 1,
+            permanent: permanentlyLabelled.has(feature),
+          });
+          marker.addTo(earthquakeLayer);
         }
 
         statusElement.dataset.state = "ready";
