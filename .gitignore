@@ -24,3 +24,4 @@ cache/
 *.tif
 *.tiff
 *.html
+!docs/index.html

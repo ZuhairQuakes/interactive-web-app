@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A live interactive map of M4.5+ earthquakes reported by the USGS during the past 30 days."
+    />
+    <title>QuakeImagery — Live USGS Earthquake Map</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        --panel: rgba(10, 19, 33, 0.94);
+        --panel-border: rgba(148, 163, 184, 0.24);
+        --text: #f8fafc;
+        --muted: #a9b7ca;
+        --accent: #38bdf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body,
+      #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        overflow: hidden;
+        background: #07111f;
+        color: var(--text);
+      }
+
+      #map {
+        z-index: 0;
+      }
+
+      .panel {
+        position: fixed;
+        z-index: 1000;
+        top: 1rem;
+        left: 50%;
+        width: min(920px, calc(100% - 2rem));
+        padding: 1rem 1.1rem;
+        transform: translateX(-50%);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(12px);
+      }
+
+      .panel__topline,
+      .controls,
+      .status-row,
+      .legend {
+        display: flex;
+        align-items: center;
+      }
+
+      .panel__topline {
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.15rem, 2.8vw, 1.65rem);
+        letter-spacing: -0.025em;
+      }
+
+      .eyebrow {
+        margin: 0 0 0.25rem;
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.45rem;
+      }
+
+      button,
+      .source-link {
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 999px;
+        background: rgba(30, 41, 59, 0.8);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      button {
+        padding: 0.6rem 0.78rem;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button:focus-visible,
+      button[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: rgba(14, 165, 233, 0.2);
+        outline: none;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.6;
+      }
+
+      .status-row {
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.6rem 1rem;
+        margin-top: 0.8rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--panel-border);
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      #status[data-state="error"] {
+        color: #fca5a5;
+      }
+
+      .legend {
+        flex-wrap: wrap;
+        gap: 0.7rem;
+      }
+
+      .legend__item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .legend__dot {
+        width: 0.7rem;
+        height: 0.7rem;
+        border: 2px solid rgba(255, 255, 255, 0.7);
+        border-radius: 50%;
+      }
+
+      .source-link {
+        position: fixed;
+        z-index: 1000;
+        right: 0.7rem;
+        bottom: 1.9rem;
+        padding: 0.58rem 0.75rem;
+        background: var(--panel);
+      }
+
+      .source-link:hover,
+      .source-link:focus-visible {
+        color: var(--accent);
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .leaflet-popup-content-wrapper,
+      .leaflet-popup-tip {
+        background: #0f1c2f;
+        color: var(--text);
+      }
+
+      .leaflet-popup-content {
+        min-width: 210px;
+        margin: 0.9rem 1rem;
+        line-height: 1.45;
+      }
+
+      .popup-title {
+        margin: 0 0 0.45rem;
+        font-size: 0.95rem;
+      }
+
+      .popup-details {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 0.8rem;
+      }
+
+      .popup-link {
+        display: inline-block;
+        margin-top: 0.55rem;
+        color: #7dd3fc;
+        font-weight: 700;
+      }
+
+      @media (max-width: 720px) {
+        .panel {
+          top: 0.55rem;
+          width: calc(100% - 1rem);
+          padding: 0.8rem;
+          border-radius: 13px;
+        }
+
+        .panel__topline {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .controls {
+          justify-content: flex-start;
+        }
+
+        button {
+          padding: 0.52rem 0.65rem;
+          font-size: 0.73rem;
+        }
+
+        .legend {
+          display: none;
+        }
+
+        .source-link {
+          font-size: 0.72rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="map" aria-label="Interactive map of recent earthquakes"></main>
+
+    <section class="panel" aria-labelledby="map-title">
+      <div class="panel__topline">
+        <div>
+          <p class="eyebrow">QuakeImagery live data</p>
+          <h1 id="map-title">USGS earthquakes · past 30 days</h1>
+        </div>
+        <nav class="controls" aria-label="Minimum magnitude">
+          <button type="button" data-minimum="4.5" aria-pressed="true">M4.5+</button>
+          <button type="button" data-minimum="5" aria-pressed="false">M5+</button>
+          <button type="button" data-minimum="6" aria-pressed="false">M6+</button>
+          <button type="button" id="refresh">Refresh</button>
+        </nav>
+      </div>
+      <div class="status-row">
+        <span id="status" role="status" aria-live="polite">Loading USGS data…</span>
+        <div class="legend" aria-label="Magnitude colour legend">
+          <span class="legend__item"><span class="legend__dot" style="background:#38bdf8"></span>M4.5–4.9</span>
+          <span class="legend__item"><span class="legend__dot" style="background:#fbbf24"></span>M5.0–5.9</span>
+          <span class="legend__item"><span class="legend__dot" style="background:#fb7185"></span>M6.0+</span>
+        </div>
+      </div>
+    </section>
+
+    <a
+      class="source-link"
+      href="https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Data: USGS
+    </a>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      "use strict";
+
+      const FEED_URL =
+        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson";
+      const map = L.map("map", { minZoom: 2, worldCopyJump: true }).setView([12, 10], 2);
+      const earthquakeLayer = L.layerGroup().addTo(map);
+      const statusElement = document.querySelector("#status");
+      const refreshButton = document.querySelector("#refresh");
+      const filterButtons = [...document.querySelectorAll("[data-minimum]")];
+      let features = [];
+      let selectedMinimum = 4.5;
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+      L.control.scale({ imperial: true, metric: true }).addTo(map);
+
+      function markerColour(magnitude) {
+        if (magnitude >= 6) return "#fb7185";
+        if (magnitude >= 5) return "#fbbf24";
+        return "#38bdf8";
+      }
+
+      function markerRadius(magnitude) {
+        return Math.max(5, Math.min(17, 5 + (magnitude - 4.5) * 4));
+      }
+
+      function createPopup(feature) {
+        const properties = feature.properties ?? {};
+        const coordinates = feature.geometry?.coordinates ?? [];
+        const container = document.createElement("section");
+        const title = document.createElement("h2");
+        const details = document.createElement("p");
+        const link = document.createElement("a");
+        const magnitude = Number(properties.mag);
+        const depth = Number(coordinates[2]);
+        const eventTime = new Date(properties.time);
+
+        title.className = "popup-title";
+        title.textContent = properties.place || "Unnamed earthquake event";
+        details.className = "popup-details";
+        details.textContent = [
+          `Magnitude ${Number.isFinite(magnitude) ? magnitude.toFixed(1) : "unknown"}`,
+          `Depth ${Number.isFinite(depth) ? depth.toFixed(1) : "unknown"} km`,
+          Number.isNaN(eventTime.valueOf()) ? "Time unavailable" : eventTime.toLocaleString(),
+        ].join(" · ");
+        link.className = "popup-link";
+        link.textContent = "View USGS event →";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.href =
+          typeof properties.url === "string" && properties.url.startsWith("https://")
+            ? properties.url
+            : "https://earthquake.usgs.gov/earthquakes/";
+
+        container.append(title, details, link);
+        return container;
+      }
+
+      function renderEvents() {
+        earthquakeLayer.clearLayers();
+        const visibleFeatures = features.filter(
+          (feature) => Number(feature.properties?.mag) >= selectedMinimum,
+        );
+
+        for (const feature of visibleFeatures) {
+          const coordinates = feature.geometry?.coordinates;
+          const magnitude = Number(feature.properties?.mag);
+          if (!Array.isArray(coordinates) || coordinates.length < 2 || !Number.isFinite(magnitude)) {
+            continue;
+          }
+          const [longitude, latitude] = coordinates;
+          if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) continue;
+
+          L.circleMarker([latitude, longitude], {
+            radius: markerRadius(magnitude),
+            color: "rgba(255, 255, 255, 0.82)",
+            weight: 1.5,
+            fillColor: markerColour(magnitude),
+            fillOpacity: 0.82,
+          })
+            .bindPopup(createPopup(feature))
+            .addTo(earthquakeLayer);
+        }
+
+        statusElement.dataset.state = "ready";
+        statusElement.textContent = `${visibleFeatures.length.toLocaleString()} events shown at M${selectedMinimum.toFixed(1)}+`;
+      }
+
+      async function loadEvents() {
+        refreshButton.disabled = true;
+        statusElement.dataset.state = "loading";
+        statusElement.textContent = "Loading USGS data…";
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 15000);
+
+        try {
+          const response = await fetch(FEED_URL, {
+            headers: { Accept: "application/geo+json, application/json" },
+            signal: controller.signal,
+          });
+          if (!response.ok) throw new Error(`USGS returned HTTP ${response.status}`);
+          const payload = await response.json();
+          if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+            throw new Error("USGS returned an unexpected response structure");
+          }
+          features = payload.features;
+          renderEvents();
+        } catch (error) {
+          statusElement.dataset.state = "error";
+          statusElement.textContent =
+            error.name === "AbortError"
+              ? "The USGS request timed out. Select Refresh to try again."
+              : `Could not load USGS data: ${error.message}`;
+        } finally {
+          window.clearTimeout(timeout);
+          refreshButton.disabled = false;
+        }
+      }
+
+      for (const button of filterButtons) {
+        button.addEventListener("click", () => {
+          selectedMinimum = Number(button.dataset.minimum);
+          for (const candidate of filterButtons) {
+            candidate.setAttribute("aria-pressed", String(candidate === button));
+          }
+          renderEvents();
+        });
+      }
+
+      refreshButton.addEventListener("click", loadEvents);
+      loadEvents();
+    </script>
+  </body>
+</html>

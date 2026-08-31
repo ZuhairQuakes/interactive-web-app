@@ -1,8 +1,19 @@
 # QuakeImagery
 
-[![Quality](https://github.com/ZuhairQuakes/Visualization-Tool/actions/workflows/quality.yml/badge.svg)](https://github.com/ZuhairQuakes/Visualization-Tool/actions/workflows/quality.yml)
+[![Quality](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/quality.yml/badge.svg)](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/quality.yml)
+[![Map demo](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/pages.yml/badge.svg)](https://github.com/ZuhairQuakes/interactive-web-app/actions/workflows/pages.yml)
 
 An interactive Streamlit application for querying the USGS Earthquake Catalog, exploring clustered earthquake events, and optionally overlaying a user-supplied georeferenced GeoTIFF.
+
+## Live earthquake map
+
+[![Open the live QuakeImagery earthquake map](docs/map-preview.svg)](https://zuhairquakes.github.io/interactive-web-app/)
+
+**[Open the interactive map →](https://zuhairquakes.github.io/interactive-web-app/)**
+
+Pan, zoom, inspect event details, and filter the current results by magnitude. The demo loads the official [USGS M4.5+ earthquake feed for the past 30 days](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson) at runtime, so no stale sample catalogue is stored in the repository.
+
+GitHub README files cannot execute interactive JavaScript directly. The preview above therefore opens the full Leaflet map deployed from this repository.
 
 ## Features
 
@@ -18,8 +29,8 @@ QuakeImagery does **not** download imagery from NASA or another imagery provider
 ## Quick start
 
 ```bash
-git clone https://github.com/ZuhairQuakes/Visualization-Tool.git
-cd QuakeImagery
+git clone https://github.com/ZuhairQuakes/interactive-web-app.git
+cd interactive-web-app
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -47,6 +58,7 @@ Large rasters are resampled to approximately two million display pixels. One-ban
 | [`quakeimagery/usgs.py`](quakeimagery/usgs.py) | validated USGS query model and GeoJSON normalization |
 | [`quakeimagery/imagery.py`](quakeimagery/imagery.py) | safe in-memory GeoTIFF loading and display normalization |
 | [`quakeimagery/mapping.py`](quakeimagery/mapping.py) | Folium event markers and raster overlays |
+| [`docs/index.html`](docs/index.html) | standalone live-USGS Leaflet map deployed to GitHub Pages |
 | [`tests/`](tests/) | unit tests for queries, parsing, imagery, and map construction |
 | [`requirements.txt`](requirements.txt) | runtime dependencies |
 
@@ -63,6 +75,6 @@ The same checks run automatically for every push and pull request. See [`CONTRIB
 
 ## Data sources and limitations
 
-Earthquake events come from the [USGS FDSN Event Web Service](https://earthquake.usgs.gov/fdsnws/event/1/). Queries are capped at 20,000 events, consistent with the service limit. Event records can be revised by USGS after retrieval, so scientific outputs should record the query parameters, retrieval time, and Git commit.
+Earthquake events come from the [USGS FDSN Event Web Service](https://earthquake.usgs.gov/fdsnws/event/1/). The standalone map uses the USGS [real-time GeoJSON summary feed](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php). Queries are capped at 20,000 events, consistent with the service limit. Event records can be revised by USGS after retrieval, so scientific outputs should record the query parameters, retrieval time, and Git commit.
 
 QuakeImagery is an exploratory visualization tool. It does not calculate earthquake probability, damage, surface deformation, or an official hazard assessment.
