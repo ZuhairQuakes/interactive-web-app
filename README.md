@@ -5,16 +5,6 @@
 
 An interactive Streamlit application for querying the USGS Earthquake Catalog, exploring clustered earthquake events, and optionally overlaying a user-supplied georeferenced GeoTIFF.
 
-## Live earthquake map
-
-[![Open the live QuakeImagery earthquake map](docs/map-preview.svg)](https://zuhairquakes.github.io/interactive-web-app/)
-
-**[Open the interactive map →](https://zuhairquakes.github.io/interactive-web-app/)**
-
-Pan, zoom, inspect event details, and filter the current results by magnitude. The demo loads the official [USGS M4.5+ earthquake feed for the past 30 days](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson) at runtime, so no stale sample catalogue is stored in the repository.
-
-GitHub README files cannot execute interactive JavaScript directly. The preview above therefore opens the full Leaflet map deployed from this repository.
-
 ## Features
 
 - Query earthquake events by date range, minimum magnitude, result limit, and geographic bounds.
