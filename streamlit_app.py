@@ -1,186 +1,165 @@
-#!/usr/bin/env python
-# coding: utf-8
+"""Streamlit entry point for QuakeImagery."""
 
-# In[3]:
+from __future__ import annotations
 
+from datetime import date, timedelta
 
-import requests
 import pandas as pd
-import folium
-from folium.plugins import MarkerCluster
-import rasterio
-from rasterio.plot import show
-from joblib import Memory  # For caching
-import geopandas as gpd  # For geographic features
 import streamlit as st
-from streamlit_folium import folium_static  # To display Folium maps in Streamlit
+from streamlit_folium import st_folium
+
+from quakeimagery.imagery import ImageryError, load_geotiff_overlay
+from quakeimagery.mapping import add_raster_overlay, create_interactive_map
+from quakeimagery.usgs import BoundingBox, EarthquakeQuery, USGSQueryError, fetch_earthquakes
+
+st.set_page_config(page_title="QuakeImagery", page_icon="🌎", layout="wide")
+
+AUSTRALIA_BOUNDS = BoundingBox(
+    min_latitude=-44.0,
+    max_latitude=-10.0,
+    min_longitude=112.0,
+    max_longitude=154.0,
+)
 
 
-# In[4]:
+@st.cache_data(ttl=900, show_spinner=False)
+def cached_fetch(query: EarthquakeQuery) -> pd.DataFrame:
+    """Cache identical USGS requests for 15 minutes."""
+    return fetch_earthquakes(query)
 
 
-# Initialize caching
-memory = Memory(location='./cache', verbose=0)
+def query_form() -> tuple[bool, EarthquakeQuery | None]:
+    """Render the sidebar query controls."""
+    today = date.today()
+    with st.sidebar.form("earthquake-query"):
+        st.header("Earthquake query")
+        start_date = st.date_input("Start date", today - timedelta(days=30))
+        end_date = st.date_input("End date", today)
+        min_magnitude = st.number_input(
+            "Minimum magnitude",
+            min_value=-2.0,
+            max_value=10.0,
+            value=5.0,
+            step=0.1,
+        )
+        maximum_events = st.number_input(
+            "Maximum events",
+            min_value=1,
+            max_value=20_000,
+            value=5_000,
+            step=100,
+            help="The USGS service rejects queries above 20,000 events.",
+        )
+        scope = st.selectbox("Geographic scope", ("Worldwide", "Australia", "Custom"))
+
+        bounds = None
+        bounds_error = None
+        if scope == "Australia":
+            bounds = AUSTRALIA_BOUNDS
+        elif scope == "Custom":
+            min_latitude = st.number_input("Minimum latitude", -90.0, 90.0, -45.0)
+            max_latitude = st.number_input("Maximum latitude", -90.0, 90.0, 45.0)
+            min_longitude = st.number_input("Minimum longitude", -360.0, 360.0, -180.0)
+            max_longitude = st.number_input("Maximum longitude", -360.0, 360.0, 180.0)
+            try:
+                bounds = BoundingBox(
+                    min_latitude=min_latitude,
+                    max_latitude=max_latitude,
+                    min_longitude=min_longitude,
+                    max_longitude=max_longitude,
+                )
+            except ValueError as exc:
+                bounds_error = str(exc)
+                st.warning(bounds_error)
+
+        submitted = st.form_submit_button("Fetch earthquakes", type="primary")
+
+    if not submitted:
+        return False, None
+    if bounds_error is not None:
+        st.sidebar.error(bounds_error)
+        return True, None
+
+    try:
+        query = EarthquakeQuery(
+            start_date=start_date,
+            end_date=end_date,
+            min_magnitude=float(min_magnitude),
+            maximum_events=int(maximum_events),
+            bounds=bounds,
+        )
+    except ValueError as exc:
+        st.sidebar.error(str(exc))
+        return True, None
+    return True, query
 
 
-# ##  Fetch Earthquake Data from USGS API
+def main() -> None:
+    st.title("QuakeImagery")
+    st.caption("Explore USGS earthquake events with an optional georeferenced raster overlay.")
 
-# In[5]:
+    submitted, query = query_form()
+    if submitted and query is not None:
+        try:
+            with st.spinner("Querying the USGS Earthquake Catalog…"):
+                st.session_state["earthquakes"] = cached_fetch(query)
+                st.session_state["last_query"] = query
+        except USGSQueryError as exc:
+            st.error(str(exc))
 
+    earthquakes = st.session_state.get("earthquakes")
+    if earthquakes is None:
+        st.info("Choose a date range and geographic scope, then fetch earthquake data.")
+        return
 
-def fetch_earthquake_data(start_time, end_time, min_magnitude):
-    """
-    Fetches earthquake data from the USGS API.
-    
-    Parameters:
-        start_time (str): Start date in YYYY-MM-DD format.
-        end_time (str): End date in YYYY-MM-DD format.
-        min_magnitude (float): Minimum magnitude of earthquakes to fetch.
-    
-    Returns:
-        pd.DataFrame: Earthquake data.
-    """
-    url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-    params = {
-        "format": "geojson",
-        "starttime": start_time,
-        "endtime": end_time,
-        "minmagnitude": min_magnitude
-    }
-    response = requests.get(url, params=params)
-    data = response.json()
-    return pd.json_normalize(data['features'])
+    if earthquakes.empty:
+        st.warning("The query returned no earthquake events.")
+        return
 
+    st.subheader(f"{len(earthquakes):,} earthquake events")
+    last_query = st.session_state.get("last_query")
+    if last_query is not None and len(earthquakes) >= last_query.maximum_events:
+        st.warning(
+            "The result reached the selected event limit. Narrow the dates, magnitude, "
+            "or geographic bounds for a complete result set."
+        )
+    st.dataframe(
+        earthquakes[
+            ["time", "magnitude", "place", "latitude", "longitude", "depth_km", "url"]
+        ],
+        hide_index=True,
+        width="stretch",
+        column_config={"url": st.column_config.LinkColumn("USGS event")},
+    )
 
-# ##  Load Satellite Imagery with Caching
+    uploaded_raster = st.file_uploader(
+        "Optional imagery overlay",
+        type=("tif", "tiff"),
+        help="Upload a georeferenced EPSG:4326 GeoTIFF. Files are processed in memory.",
+    )
 
-# In[6]:
+    map_object = create_interactive_map(earthquakes)
+    if uploaded_raster is not None:
+        try:
+            overlay = load_geotiff_overlay(uploaded_raster.getvalue())
+            add_raster_overlay(map_object, overlay)
+        except ImageryError as exc:
+            st.error(f"Could not use the GeoTIFF: {exc}")
 
+    st_folium(map_object, width=1200, height=650, returned_objects=())
+    map_html = map_object.get_root().render()
+    st.download_button(
+        "Download map as HTML",
+        data=map_html,
+        file_name="quakeimagery-map.html",
+        mime="text/html",
+    )
 
-@memory.cache
-def load_satellite_imagery(satellite_image_path):
-    """
-    Loads satellite imagery from a GeoTIFF file.
-    
-    Parameters:
-        satellite_image_path (str): Path to the GeoTIFF file.
-    
-    Returns:
-        np.ndarray: Satellite image data.
-    """
-    with rasterio.open(satellite_image_path) as src:
-        return src.read(1)
-
-
-# ## Add Satellite Imagery to the Map
-
-# In[7]:
-
-
-def add_satellite_imagery(map, satellite_image_path):
-    """
-    Adds satellite imagery to the Folium map.
-    
-    Parameters:
-        map (folium.Map): The Folium map object.
-        satellite_image_path (str): Path to the GeoTIFF file.
-    """
-    if satellite_image_path:
-        image = load_satellite_imagery(satellite_image_path)  # Use cached function
-        with rasterio.open(satellite_image_path) as src:
-            bounds = src.bounds
-            folium.raster_layers.ImageOverlay(
-                image=image,  # Use the cached image
-                bounds=[[bounds.bottom, bounds.left], [bounds.top, bounds.right]],
-                opacity=0.6,
-                interactive=True,
-                cross_origin=False,
-                zindex=1,
-            ).add_to(map)
-    else:
-        print("Skipping satellite imagery for quick testing.")
+    st.caption(
+        "Earthquake data are provided by the USGS Earthquake Catalog. "
+        "This exploratory tool is not an official hazard assessment."
+    )
 
 
-# ## Create an Interactive Map
-
-# In[8]:
-
-
-def create_interactive_map(earthquake_data):
-    """
-    Creates an interactive Folium map with earthquake markers.
-    
-    Parameters:
-        earthquake_data (pd.DataFrame): Earthquake data.
-    
-    Returns:
-        folium.Map: The Folium map object.
-    """
-    map = folium.Map(location=[-25, 135], zoom_start=4)
-    marker_cluster = MarkerCluster().add_to(map)
-    for _, row in earthquake_data.iterrows():
-        folium.Marker(
-            location=[row['latitude'], row['longitude']],
-            popup=f"Magnitude: {row['properties.mag']}, Depth: {row['depth']} km",
-            icon=folium.Icon(color='red')
-        ).add_to(marker_cluster)
-    return map
-
-
-# In[9]:
-
-
-# Streamlit app
-def main():
-    st.title("Earthquake Impact Visualization Tool")
-    st.write("Visualize earthquake data and its environmental impact using satellite imagery.")
-
-    # Sidebar for user inputs
-    st.sidebar.header("User Inputs")
-    start_time = st.sidebar.text_input("Start Date (YYYY-MM-DD)", "2013-01-01")
-    end_time = st.sidebar.text_input("End Date (YYYY-MM-DD)", "2023-01-31")
-    min_magnitude = st.sidebar.number_input("Minimum Magnitude", value=6.0)
-    satellite_image_path = st.sidebar.text_input("Path to Satellite Imagery (GeoTIFF)", "NE1_LR_LC_SR.tif")
-
-    # Fetch earthquake data
-    if st.sidebar.button("Fetch Earthquake Data"):
-        st.write("Fetching earthquake data...")
-        earthquake_data = fetch_earthquake_data(start_time, end_time, min_magnitude)
-
-        # Extract latitude, longitude, and depth
-        earthquake_data['latitude'] = earthquake_data['geometry.coordinates'].apply(lambda x: x[1])
-        earthquake_data['longitude'] = earthquake_data['geometry.coordinates'].apply(lambda x: x[0])
-        earthquake_data['depth'] = earthquake_data['geometry.coordinates'].apply(lambda x: x[2])
-
-        # Display earthquake data
-        st.write("Earthquake Data Preview:")
-        st.dataframe(earthquake_data.head())
-
-        # Create the interactive map
-        st.write("Creating interactive map...")
-        map = create_interactive_map(earthquake_data)
-
-        # Add satellite imagery
-        add_satellite_imagery(map, satellite_image_path)
-
-#         # Add geographic features
-#         add_geographic_features(map)
-
-        # Display the map
-        st.write("Interactive Map:")
-        folium_static(map)
-
-        # Save the map to an HTML file
-        map.save("earthquake_map_with_imagery.html")
-        st.success("Map saved as earthquake_map_with_imagery.html")
-
-# Run the Streamlit app
 if __name__ == "__main__":
     main()
-
-
-# In[ ]:
-
-
-
-

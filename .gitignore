@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments and local configuration
+.env
+.env.*
+.venv/
+venv/
+.streamlit/secrets.toml
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+
+# Generated and local geospatial artifacts
+cache/
+*.tif
+*.tiff
+*.html
