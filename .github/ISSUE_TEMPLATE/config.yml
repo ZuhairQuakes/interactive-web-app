@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/ZuhairQuakes/interactive-web-app/security
+    about: Report suspected vulnerabilities privately; do not open a public issue.
+  - name: Usage question
+    url: https://github.com/ZuhairQuakes/interactive-web-app/discussions
+    about: Ask how to use QuakeImagery or discuss an idea.

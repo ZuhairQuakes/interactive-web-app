@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use QuakeImagery in research, please cite the software."
+title: "QuakeImagery"
+type: software
+authors:
+  - family-names: "Zuhair"
+    given-names: "Mohd"
+version: 0.1.0
+date-released: 2026-09-01
+license: MIT
+repository-code: "https://github.com/ZuhairQuakes/interactive-web-app"
+url: "https://github.com/ZuhairQuakes/interactive-web-app"
+keywords:
+  - earthquakes
+  - geospatial analysis
+  - natural hazards
+  - remote sensing
+  - USGS

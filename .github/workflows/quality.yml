@@ -25,5 +25,13 @@ jobs:
         run: ruff check .
       - name: Test
         run: pytest
+      - name: Build package
+        run: python -m build
+      - name: Verify wheel contents
+        run: python -m zipfile --list dist/*.whl
+      - name: Smoke-test installed metadata
+        run: |
+          python -m pip install --no-deps --force-reinstall dist/*.whl
+          python -c "from importlib.metadata import version; assert version('quakeimagery') == '0.1.0'"
       - name: Validate repository artifacts
         run: python tools/validate_repository.py

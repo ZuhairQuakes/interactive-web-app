@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a focused improvement to QuakeImagery.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: User need
+      description: What natural-hazard or geospatial workflow needs improvement?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the desired behaviour and any alternatives considered.
+    validations:
+      required: true
+  - type: textarea
+    id: scientific-impact
+    attributes:
+      label: Scientific interpretation
+      description: Could this change affect results, assumptions, units, or uncertainty?

@@ -1,3 +1,66 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quakeimagery"
+version = "0.1.0"
+description = "Explore USGS earthquake events with optional georeferenced imagery overlays."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Mohd Zuhair" }]
+keywords = [
+  "earthquake",
+  "geospatial",
+  "natural-hazards",
+  "remote-sensing",
+  "seismology",
+  "usgs",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+  "folium>=0.18,<2",
+  "numpy>=1.26,<3",
+  "pandas>=2.1,<3",
+  "rasterio>=1.3,<2",
+  "requests>=2.31,<3",
+  "streamlit>=1.32,<2",
+  "streamlit-folium>=0.20,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2,<2",
+  "pytest>=8,<10",
+  "ruff>=0.8,<1",
+]
+
+[project.scripts]
+quakeimagery = "quakeimagery.cli:main"
+
+[project.urls]
+Changelog = "https://github.com/ZuhairQuakes/interactive-web-app/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/ZuhairQuakes/interactive-web-app#readme"
+Issues = "https://github.com/ZuhairQuakes/interactive-web-app/issues"
+Repository = "https://github.com/ZuhairQuakes/interactive-web-app"
+
+[tool.setuptools]
+py-modules = ["streamlit_app"]
+
+[tool.setuptools.packages.find]
+include = ["quakeimagery*"]
+
 [tool.pytest.ini_options]
 addopts = "-q"
 pythonpath = ["."]
